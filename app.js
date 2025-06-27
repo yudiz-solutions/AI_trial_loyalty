@@ -7,8 +7,10 @@ import mongoSanitize from 'express-mongo-sanitize';
 import dotenv from 'dotenv';
 
 // Import routes
-import userRoutes from './src/routes/userRoutes.js';
 import authRoutes from './src/routes/authRoutes.js';
+import adminRoutes from './src/routes/adminRoutes.js';
+import merchantRoutes from './src/routes/merchantRoutes.js';
+import workerRoutes from './src/routes/workerRoutes.js';
 
 // Import middleware
 import { errorHandler } from './src/middlewares/errorMiddleware.js';
@@ -55,14 +57,17 @@ app.use(requestLogger);
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'success',
-    message: 'Server is healthy',
-    timestamp: new Date().toISOString()
+    message: 'Loyalty Rewards API is healthy',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0'
   });
 });
 
 // API routes
 app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/merchant', merchantRoutes);
+app.use('/api/v1/worker', workerRoutes);
 
 // Handle undefined routes
 app.all('*', (req, res) => {

@@ -1,8 +1,8 @@
 import express from 'express';
 import { body } from 'express-validator';
 import {
-  register,
   login,
+  registerMerchant,
   getMe,
   updatePassword,
   forgotPassword,
@@ -15,7 +15,20 @@ import { validate } from '../middlewares/validationMiddleware.js';
 const router = express.Router();
 
 // Validation rules
-const registerValidation = [
+const loginValidation = [
+  body('sEmail')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email'),
+  body('sPassword')
+    .notEmpty()
+    .withMessage('Password is required'),
+  body('sRole')
+    .isIn(['admin', 'merchant', 'worker'])
+    .withMessage('Role must be admin, merchant, or worker')
+];
+
+const registerMerchantValidation = [
   body('sFirstName')
     .trim()
     .isLength({ min: 2, max: 50 })
@@ -32,17 +45,15 @@ const registerValidation = [
     .isLength({ min: 6 })
     .withMessage('Password must be at least 6 characters long')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number')
-];
-
-const loginValidation = [
-  body('sEmail')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
-  body('sPassword')
-    .notEmpty()
-    .withMessage('Password is required')
+    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, and one number'),
+  body('sBusinessName')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Business name must be between 2 and 100 characters'),
+  body('sBusinessAddress')
+    .trim()
+    .isLength({ min: 5, max: 200 })
+    .withMessage('Business address must be between 5 and 200 characters')
 ];
 
 const updatePasswordValidation = [
@@ -60,7 +71,10 @@ const forgotPasswordValidation = [
   body('sEmail')
     .isEmail()
     .normalizeEmail()
-    .withMessage('Please provide a valid email')
+    .withMessage('Please provide a valid email'),
+  body('sRole')
+    .isIn(['admin', 'merchant', 'worker'])
+    .withMessage('Role must be admin, merchant, or worker')
 ];
 
 const resetPasswordValidation = [
@@ -71,12 +85,15 @@ const resetPasswordValidation = [
     .isLength({ min: 6 })
     .withMessage('New password must be at least 6 characters long')
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .withMessage('New password must contain at least one uppercase letter, one lowercase letter, and one number')
+    .withMessage('New password must contain at least one uppercase letter, one lowercase letter, and one number'),
+  body('sRole')
+    .isIn(['admin', 'merchant', 'worker'])
+    .withMessage('Role must be admin, merchant, or worker')
 ];
 
 // Public routes
-router.post('/register', registerValidation, validate, register);
 router.post('/login', loginValidation, validate, login);
+router.post('/register-merchant', registerMerchantValidation, validate, registerMerchant);
 router.post('/forgot-password', forgotPasswordValidation, validate, forgotPassword);
 router.post('/reset-password', resetPasswordValidation, validate, resetPassword);
 

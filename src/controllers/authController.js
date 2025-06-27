@@ -1,21 +1,23 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import User from '../models/userModel.js';
-import Token from '../models/tokenModel.js';
+import Admin from '../models/adminModel.js';
+import Merchant from '../models/merchantModel.js';
+import Worker from '../models/workerModel.js';
+import PasswordResetToken from '../models/passwordResetTokenModel.js';
 import { AppError } from '../utils/appError.js';
 import { catchAsync } from '../utils/catchAsync.js';
 import logger from '../utils/logger.js';
 
 // Generate JWT token
-const generateToken = (userId) => {
-  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+const generateToken = (userId, role) => {
+  return jwt.sign({ userId, role }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE
   });
 };
 
 // Send token response
-const sendTokenResponse = (user, statusCode, res) => {
-  const token = generateToken(user._id);
+const sendTokenResponse = (user, role, statusCode, res) => {
+  const token = generateToken(user._id, role);
 
   // Remove password from output
   user.sPasswordHash = undefined;
@@ -24,51 +26,55 @@ const sendTokenResponse = (user, statusCode, res) => {
     status: 'success',
     token,
     data: {
-      user
+      user: {
+        ...user.toObject(),
+        role
+      }
     }
   });
 };
 
-// Register user
-export const register = catchAsync(async (req, res, next) => {
-  const { sFirstName, sLastName, sEmail, sPassword } = req.body;
-
-  // Check if user already exists
-  const existingUser = await User.findByEmail(sEmail);
-  if (existingUser) {
-    return next(new AppError('User already exists with this email', 400));
-  }
-
-  // Create user
-  const user = await User.create({
-    sFirstName,
-    sLastName,
-    sEmail,
-    sPasswordHash: sPassword
-  });
-
-  logger.info(`New user registered: ${sEmail}`);
-  sendTokenResponse(user, 201, res);
-});
-
-// Login user
+// Login for all user types
 export const login = catchAsync(async (req, res, next) => {
-  const { sEmail, sPassword } = req.body;
+  const { sEmail, sPassword, sRole } = req.body;
 
-  // Check if email and password exist
-  if (!sEmail || !sPassword) {
-    return next(new AppError('Please provide email and password', 400));
+  // Check if email, password, and role exist
+  if (!sEmail || !sPassword || !sRole) {
+    return next(new AppError('Please provide email, password, and role', 400));
   }
 
-  // Check for user and include password
-  const user = await User.findByEmail(sEmail).select('+sPasswordHash');
+  let user;
+  let Model;
+
+  // Determine which model to use based on role
+  switch (sRole) {
+    case 'admin':
+      Model = Admin;
+      break;
+    case 'merchant':
+      Model = Merchant;
+      break;
+    case 'worker':
+      Model = Worker;
+      break;
+    default:
+      return next(new AppError('Invalid role specified', 400));
+  }
+
+  // Find user and include password
+  user = await Model.findByEmail(sEmail).select('+sPasswordHash');
   if (!user) {
     return next(new AppError('Invalid credentials', 401));
   }
 
-  // Check if user is active
-  if (!user.bIsActive) {
-    return next(new AppError('Account is deactivated', 401));
+  // Check if merchant is approved (for merchant login)
+  if (sRole === 'merchant' && !['approved', 'active'].includes(user.sStatus)) {
+    return next(new AppError('Account is not approved yet', 401));
+  }
+
+  // Check if worker is active (for worker login)
+  if (sRole === 'worker' && user.sStatus !== 'active') {
+    return next(new AppError('Account is inactive', 401));
   }
 
   // Check if password matches
@@ -77,21 +83,75 @@ export const login = catchAsync(async (req, res, next) => {
     return next(new AppError('Invalid credentials', 401));
   }
 
-  // Update last login
-  await user.updateLastLogin();
+  logger.info(`${sRole} logged in: ${sEmail}`);
+  sendTokenResponse(user, sRole, 200, res);
+});
 
-  logger.info(`User logged in: ${sEmail}`);
-  sendTokenResponse(user, 200, res);
+// Register merchant
+export const registerMerchant = catchAsync(async (req, res, next) => {
+  const {
+    sFirstName,
+    sLastName,
+    sEmail,
+    sPhoneNumber,
+    sPassword,
+    sBusinessName,
+    sBusinessAddress
+  } = req.body;
+
+  // Check if merchant already exists
+  const existingMerchant = await Merchant.findByEmail(sEmail);
+  if (existingMerchant) {
+    return next(new AppError('Merchant already exists with this email', 400));
+  }
+
+  // Create merchant
+  const merchant = await Merchant.create({
+    sFirstName,
+    sLastName,
+    sEmail,
+    sPhoneNumber,
+    sPasswordHash: sPassword,
+    sBusinessName,
+    sBusinessAddress
+  });
+
+  logger.info(`New merchant registered: ${sEmail}`);
+  sendTokenResponse(merchant, 'merchant', 201, res);
 });
 
 // Get current user
 export const getMe = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.user.id);
+  let user;
+  let Model;
+
+  // Determine which model to use based on role
+  switch (req.user.role) {
+    case 'admin':
+      Model = Admin;
+      break;
+    case 'merchant':
+      Model = Merchant;
+      break;
+    case 'worker':
+      Model = Worker;
+      break;
+    default:
+      return next(new AppError('Invalid user role', 400));
+  }
+
+  user = await Model.findById(req.user.userId);
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
 
   res.status(200).json({
     status: 'success',
     data: {
-      user
+      user: {
+        ...user.toObject(),
+        role: req.user.role
+      }
     }
   });
 });
@@ -100,8 +160,29 @@ export const getMe = catchAsync(async (req, res, next) => {
 export const updatePassword = catchAsync(async (req, res, next) => {
   const { sCurrentPassword, sNewPassword } = req.body;
 
+  let user;
+  let Model;
+
+  // Determine which model to use based on role
+  switch (req.user.role) {
+    case 'admin':
+      Model = Admin;
+      break;
+    case 'merchant':
+      Model = Merchant;
+      break;
+    case 'worker':
+      Model = Worker;
+      break;
+    default:
+      return next(new AppError('Invalid user role', 400));
+  }
+
   // Get user with password
-  const user = await User.findById(req.user.id).select('+sPasswordHash');
+  user = await Model.findById(req.user.userId).select('+sPasswordHash');
+  if (!user) {
+    return next(new AppError('User not found', 404));
+  }
 
   // Check current password
   const isCurrentPasswordValid = await user.isPasswordValid(sCurrentPassword);
@@ -113,16 +194,38 @@ export const updatePassword = catchAsync(async (req, res, next) => {
   user.sPasswordHash = sNewPassword;
   await user.save();
 
-  logger.info(`Password updated for user: ${user.sEmail}`);
-  sendTokenResponse(user, 200, res);
+  logger.info(`Password updated for ${req.user.role}: ${user.sEmail}`);
+  sendTokenResponse(user, req.user.role, 200, res);
 });
 
 // Forgot password
 export const forgotPassword = catchAsync(async (req, res, next) => {
-  const { sEmail } = req.body;
+  const { sEmail, sRole } = req.body;
+
+  if (!sEmail || !sRole) {
+    return next(new AppError('Please provide email and role', 400));
+  }
+
+  let user;
+  let Model;
+
+  // Determine which model to use based on role
+  switch (sRole) {
+    case 'admin':
+      Model = Admin;
+      break;
+    case 'merchant':
+      Model = Merchant;
+      break;
+    case 'worker':
+      Model = Worker;
+      break;
+    default:
+      return next(new AppError('Invalid role specified', 400));
+  }
 
   // Get user based on email
-  const user = await User.findByEmail(sEmail);
+  user = await Model.findByEmail(sEmail);
   if (!user) {
     return next(new AppError('No user found with that email address', 404));
   }
@@ -132,14 +235,13 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
   // Save token to database
-  await Token.create({
-    oUserId: user._id,
+  await PasswordResetToken.create({
+    sEmail,
     sToken: resetToken,
-    sType: 'password-reset',
     dExpiresAt: expiresAt
   });
 
-  logger.info(`Password reset token generated for user: ${sEmail}`);
+  logger.info(`Password reset token generated for ${sRole}: ${sEmail}`);
 
   res.status(200).json({
     status: 'success',
@@ -152,16 +254,38 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
 
 // Reset password
 export const resetPassword = catchAsync(async (req, res, next) => {
-  const { sToken, sNewPassword } = req.body;
+  const { sToken, sNewPassword, sRole } = req.body;
+
+  if (!sToken || !sNewPassword || !sRole) {
+    return next(new AppError('Please provide token, new password, and role', 400));
+  }
 
   // Find valid token
-  const tokenDoc = await Token.findValidToken(sToken, 'password-reset');
+  const tokenDoc = await PasswordResetToken.findValidToken(sToken);
   if (!tokenDoc) {
     return next(new AppError('Token is invalid or has expired', 400));
   }
 
+  let user;
+  let Model;
+
+  // Determine which model to use based on role
+  switch (sRole) {
+    case 'admin':
+      Model = Admin;
+      break;
+    case 'merchant':
+      Model = Merchant;
+      break;
+    case 'worker':
+      Model = Worker;
+      break;
+    default:
+      return next(new AppError('Invalid role specified', 400));
+  }
+
   // Get user
-  const user = await User.findById(tokenDoc.oUserId);
+  user = await Model.findByEmail(tokenDoc.sEmail);
   if (!user) {
     return next(new AppError('User not found', 404));
   }
@@ -170,18 +294,15 @@ export const resetPassword = catchAsync(async (req, res, next) => {
   user.sPasswordHash = sNewPassword;
   await user.save();
 
-  // Mark token as used
-  await tokenDoc.markAsUsed();
+  // Delete the used token
+  await PasswordResetToken.findByIdAndDelete(tokenDoc._id);
 
-  logger.info(`Password reset successful for user: ${user.sEmail}`);
-  sendTokenResponse(user, 200, res);
+  logger.info(`Password reset successful for ${sRole}: ${user.sEmail}`);
+  sendTokenResponse(user, sRole, 200, res);
 });
 
-// Logout (if using token blacklisting)
+// Logout
 export const logout = catchAsync(async (req, res, next) => {
-  // In a real application, you might want to blacklist the token
-  // For now, we'll just send a success response
-  
   res.status(200).json({
     status: 'success',
     message: 'Logged out successfully'
