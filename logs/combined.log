@@ -23,3 +23,6 @@
 {"duration":"30ms","ip":"127.0.0.1","level":"info","message":"GET / - 404","method":"GET","service":"ai-trial-loyalty","statusCode":404,"timestamp":"2025-06-27T12:13:12.720Z","url":"/"}
 {"ip":"127.0.0.1","level":"info","message":"GET /","method":"GET","service":"ai-trial-loyalty","timestamp":"2025-06-27T12:13:23.036Z","url":"/","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"}
 {"duration":"10ms","ip":"127.0.0.1","level":"info","message":"GET / - 404","method":"GET","service":"ai-trial-loyalty","statusCode":404,"timestamp":"2025-06-27T12:13:23.046Z","url":"/"}
+{"level":"info","message":"Server running in development mode on port 3000","service":"ai-trial-loyalty","timestamp":"2025-06-27T12:45:38.026Z"}
+{"ip":"127.0.0.1","level":"info","message":"GET /","method":"GET","service":"ai-trial-loyalty","timestamp":"2025-06-27T12:45:38.424Z","url":"/","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"}
+{"duration":"28ms","ip":"127.0.0.1","level":"info","message":"GET / - 404","method":"GET","service":"ai-trial-loyalty","statusCode":404,"timestamp":"2025-06-27T12:45:38.452Z","url":"/"}
