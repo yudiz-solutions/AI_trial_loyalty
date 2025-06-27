@@ -30,3 +30,5 @@
 {"duration":"8ms","ip":"127.0.0.1","level":"info","message":"GET / - 404","method":"GET","service":"ai-trial-loyalty","statusCode":404,"timestamp":"2025-06-27T12:45:44.722Z","url":"/"}
 {"ip":"127.0.0.1","level":"info","message":"GET /","method":"GET","service":"ai-trial-loyalty","timestamp":"2025-06-27T12:45:52.924Z","url":"/","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"}
 {"duration":"5ms","ip":"127.0.0.1","level":"info","message":"GET / - 404","method":"GET","service":"ai-trial-loyalty","statusCode":404,"timestamp":"2025-06-27T12:45:52.929Z","url":"/"}
+{"ip":"127.0.0.1","level":"info","message":"GET /","method":"GET","service":"ai-trial-loyalty","timestamp":"2025-06-27T12:46:01.143Z","url":"/","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"}
+{"duration":"6ms","ip":"127.0.0.1","level":"info","message":"GET / - 404","method":"GET","service":"ai-trial-loyalty","statusCode":404,"timestamp":"2025-06-27T12:46:01.149Z","url":"/"}
