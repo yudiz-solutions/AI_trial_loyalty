@@ -41,3 +41,4 @@
 {"duration":"3ms","ip":"127.0.0.1","level":"info","message":"GET / - 404","method":"GET","service":"ai-trial-loyalty","statusCode":404,"timestamp":"2025-06-27T13:30:19.731Z","url":"/"}
 {"ip":"127.0.0.1","level":"info","message":"GET /","method":"GET","service":"ai-trial-loyalty","timestamp":"2025-06-27T13:30:27.937Z","url":"/","userAgent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"}
 {"duration":"4ms","ip":"127.0.0.1","level":"info","message":"GET / - 404","method":"GET","service":"ai-trial-loyalty","statusCode":404,"timestamp":"2025-06-27T13:30:27.941Z","url":"/"}
+{"level":"info","message":"Server running in development mode on port 3000","service":"ai-trial-loyalty","timestamp":"2025-06-30T09:24:07.863Z"}
